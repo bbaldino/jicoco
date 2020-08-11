@@ -19,12 +19,16 @@ package org.jitsi.config
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigObject
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import org.jitsi.metaconfig.ConfigException
 import org.jitsi.metaconfig.ConfigSource
 import java.time.Duration
+import java.util.regex.Pattern
+import java.util.regex.PatternSyntaxException
 import kotlin.reflect.typeOf
 
 class TypesafeConfigSourceTest : ShouldSpec() {
@@ -114,9 +118,30 @@ class TypesafeConfigSourceTest : ShouldSpec() {
                     getValue<Color>("color") shouldBe Color.BLUE
                 }
             }
+            context("custom getters") {
+                CustomTypesafeGetters[typeOf<Pattern>()] = object : CustomTypesafeGetter<Pattern> {
+                    override fun get(key: String, config: Config): Pattern {
+                        return try {
+                            Pattern.compile(config.getString(key))
+                        } catch (e: PatternSyntaxException) {
+                            throw ConfigException.UnableToRetrieve.Error(e)
+                        }
+                    }
+                }
+                withConfig("my-regex = \"abc\"") {
+                    val regex = getValue<Pattern>("my-regex")
+                    regex.pattern() shouldBe "abc"
+                }
+                context("when there's an error") {
+                    withConfig("my-regex = \"(\"") {
+                        shouldThrow<ConfigException.UnableToRetrieve.Error> {
+                            getValue<Pattern>("my-regex")
+                        }
+                    }
+                }
+            }
         }
     }
-
 }
 
 private fun withConfig(configStr: String, block: ConfigScope.() -> Unit) {

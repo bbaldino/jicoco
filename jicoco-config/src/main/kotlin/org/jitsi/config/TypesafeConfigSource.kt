@@ -52,6 +52,9 @@ class TypesafeConfigSource(
             typeOf<Duration>() -> wrap { key -> config.getDuration(key) }
             typeOf<ConfigObject>() -> wrap { key -> config.getObject(key) }
             typeOf<List<Config>>() -> wrap { key -> config.getConfigList(key) }
+            in CustomTypesafeGetters -> wrap { key ->
+                CustomTypesafeGetters[type]!!.get(key, config)
+            }
             else -> throw ConfigException.UnsupportedType("Type $type unsupported")
         }
     }
