@@ -87,6 +87,7 @@ class JitsiConfig {
                 .withFallback(ConfigFactory.parseResourcesAnySyntax("application"))
                 // Fallback to reference.(conf|json|properties)
                 .withFallback(ConfigFactory.defaultReference())
+                .resolve()
         }
 
         fun reloadNewConfig() {
